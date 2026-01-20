@@ -1,0 +1,478 @@
+================================================================================
+                          LOCALIZATION-CONNECT(1)
+                     App Store Localization Tools Manual
+================================================================================
+
+NAME
+    localization-connect - AI-powered App Store localization pipeline
+
+SYNOPSIS
+    python -m localization_connect.app_store_connect [--translate] [--send]
+        [--fix-urls] [OPTIONS]
+
+    python -m localization_connect.resize_screenshots [--ios|--ipad|--mac]
+        [OPTIONS]
+
+    python -m localization_connect.translate_screenshots [--force]
+        [--languages LANG...]
+
+DESCRIPTION
+    localization-connect is a comprehensive toolkit for localizing iOS, iPadOS,
+    and macOS applications for the App Store. It provides three main capabilities:
+
+    * Metadata Translation: Translate app descriptions, release notes,
+      promotional text, and keywords using Claude AI while respecting App Store
+      character limits and maintaining brand voice.
+
+    * Screenshot Translation: Use Google Gemini to translate text within
+      screenshot images while preserving the original design and layout.
+
+    * Direct Upload: Push translated content directly to App Store Connect
+      via the official API.
+
+    The toolkit is designed to be used as a complete pipeline, from English
+    source content to published localizations in App Store Connect.
+
+================================================================================
+                                  COMMANDS
+================================================================================
+
+app_store_connect
+-----------------
+The main command for translating metadata and uploading to App Store Connect.
+
+    --translate
+        Translate English source files to all configured target locales using
+        Claude AI. Files that already exist and meet character limits are
+        skipped unless --force is specified.
+
+    --send
+        Upload translated content to App Store Connect. Requires --ios-version
+        and/or --mac-version to specify target versions.
+
+    --fix-urls
+        Update privacy policy and terms of service URLs in desc.txt for each
+        locale. Transforms base URLs by inserting the locale code
+        (e.g., /docs/PrivacyPolicy becomes /docs/de/PrivacyPolicy for German).
+
+
+resize_screenshots
+------------------
+Resize PNG screenshots to App Store required dimensions.
+
+    --ios       Resize for iPhone display sizes (default)
+    --ipad      Resize for iPad display sizes
+    --mac       Resize for Mac display sizes
+
+
+translate_screenshots
+---------------------
+Translate text in screenshot images using Google Gemini.
+
+================================================================================
+                                  OPTIONS
+================================================================================
+
+TRANSLATION OPTIONS
+-------------------
+
+    --force
+        Force retranslation of all files, even if they already exist and meet
+        character limits. Without this flag, existing valid translations are
+        skipped.
+
+    --only LOCALE | LOCALE/FILE
+        Limit translation to a specific locale or a specific file within a
+        locale.
+
+        Examples:
+            --only de               Only translate German
+            --only de/promo.txt     Only translate German promotional text
+
+    --env PATH
+        Path to a custom .env file for configuration. If not specified, looks
+        for .env in the current directory.
+
+
+UPLOAD OPTIONS
+--------------
+
+    --ios-version VERSION
+        iOS app version string to update (e.g., "1.0.0"). Required for iOS
+        uploads.
+
+    --mac-version VERSION
+        macOS app version string to update. Required for Mac uploads.
+
+    --fields FIELD...
+        Specify which fields to upload. Can be one or more of:
+
+            new         What's New / Release Notes (new.txt)
+            desc        App Description (desc.txt)
+            promo       Promotional Text (promo.txt)
+            keywords    Keywords (keywords.txt)
+            all         All fields (default)
+
+
+SCREENSHOT OPTIONS
+------------------
+
+    --local
+        Process the current directory and its parent instead of language
+        subdirectories.
+
+    --dry-run
+        Preview changes without modifying any files. Shows what would be
+        resized.
+
+    --languages LANG...
+        Specific language codes to translate screenshots to. If not specified,
+        all default languages are processed.
+
+================================================================================
+                             DIRECTORY STRUCTURE
+================================================================================
+
+The toolkit expects the following directory structure:
+
+    project/
+    +-- en/                     # English source (required)
+    |   +-- new.txt             # What's New (4000 char max)
+    |   +-- desc.txt            # Description (4000 char max)
+    |   +-- promo.txt           # Promotional Text (170 char max)
+    |   +-- keywords.txt        # Keywords, comma-separated (100 char max)
+    +-- de/                     # German translations
+    +-- es-MX/                  # Spanish (Mexico)
+    +-- ja/                     # Japanese
+    +-- ko/                     # Korean
+    +-- pt-BR/                  # Portuguese (Brazil)
+    +-- zh-CN/                  # Chinese (Simplified)
+    +-- fr/                     # French
+    +-- .env                    # Configuration file
+
+Target locale directories should be created before running translation.
+They will be populated with translated files.
+
+================================================================================
+                                ENVIRONMENT
+================================================================================
+
+Configuration is loaded from environment variables, typically via a .env file.
+
+REQUIRED FOR TRANSLATION
+------------------------
+
+    CLAUDE_API_KEY
+        Anthropic API key for Claude AI. Must start with "sk-ant-".
+
+    CLAUDE_MODEL
+        Claude model to use. Default: claude-sonnet-4-20250514
+
+
+REQUIRED FOR SCREENSHOT TRANSLATION
+-----------------------------------
+
+    GOOGLE_API_KEY
+        Google AI API key for Gemini.
+
+    GEMINI_MODEL
+        Gemini model ID. Default: models/gemini-2.0-flash
+
+
+REQUIRED FOR APP STORE CONNECT UPLOAD
+-------------------------------------
+
+    APP_STORE_KEY_ID
+        API Key ID from App Store Connect (10 characters).
+
+    APP_STORE_ISSUER_ID
+        Issuer ID from App Store Connect (UUID format).
+
+    APP_STORE_PRIVATE_KEY_PATH
+        Absolute path to the .p8 private key file downloaded from
+        App Store Connect.
+
+    IOS_APP_ID
+        iOS App ID from App Store Connect.
+
+    MAC_APP_ID
+        Mac App ID from App Store Connect (optional, only needed for
+        Mac uploads).
+
+
+OPTIONAL CONFIGURATION
+----------------------
+
+    APP_NAME
+        Your app's name, used in translation prompts for context.
+
+    APP_DESCRIPTION
+        Brief description of your app, used in translation prompts.
+
+    BRAND_VOICE
+        Tone and style guidelines for translations
+        (e.g., "Professional and friendly").
+
+    BASE_PRIVACY_URL
+        Base URL for privacy policy, used by --fix-urls.
+
+    BASE_TERMS_URL
+        Base URL for terms of service, used by --fix-urls.
+
+================================================================================
+                              CHARACTER LIMITS
+================================================================================
+
+App Store Connect enforces strict character limits:
+
+    Field               File            Limit
+    ------------------- --------------- ----------------
+    What's New          new.txt         4,000 characters
+    Description         desc.txt        4,000 characters
+    Promotional Text    promo.txt       170 characters
+    Keywords            keywords.txt    100 characters
+
+The translation system automatically retries (up to 2 times) when Claude's
+translation exceeds these limits, requesting a shorter version.
+
+================================================================================
+                              SUPPORTED LOCALES
+================================================================================
+
+    Folder      Locale Code     Language
+    ----------- --------------- ------------------------
+    en          en-US           English (U.S.)
+    de          de-DE           German
+    es-MX       es-MX           Spanish (Mexico)
+    fr          fr-FR           French
+    it          it              Italian
+    ja          ja              Japanese
+    ko          ko              Korean
+    pt-BR       pt-BR           Portuguese (Brazil)
+    ru          ru              Russian
+    zh-CN       zh-Hans         Chinese (Simplified)
+    zh-TW       zh-Hant         Chinese (Traditional)
+
+================================================================================
+                              SCREENSHOT SIZES
+================================================================================
+
+iPhone (--ios)
+--------------
+    6.5" Display        1260x2736, 2736x1260
+    6.7" Display        1320x2868, 2868x1320
+    6.9" Display        1290x2796, 2796x1290
+
+iPad (--ipad)
+-------------
+    12.9" Display       2048x2732, 2732x2048
+    13" Display         2064x2752, 2752x2064
+
+Mac (--mac)
+-----------
+    Standard            1280x800, 1440x900
+    Retina              2560x1600, 2880x1800
+
+================================================================================
+                                OUTPUT FILES
+================================================================================
+
+After translation, each locale folder contains:
+
+    new.txt
+        Translated What's New / Release Notes
+
+    desc.txt
+        Translated App Description
+
+    promo.txt
+        Translated Promotional Text
+
+    keywords.txt
+        Translated Keywords
+
+    full_translation.json
+        JSON file containing all translations plus Claude's translation
+        considerations and notes for each field. Useful for reviewing
+        translation decisions.
+
+================================================================================
+                                  EXAMPLES
+================================================================================
+
+BASIC TRANSLATION WORKFLOW
+--------------------------
+
+    # 1. Set up environment
+    cp .env.example .env
+    # Edit .env with your API keys
+
+    # 2. Create source content
+    mkdir -p en
+    echo "Bug fixes and improvements" > en/new.txt
+    echo "Your app description here" > en/desc.txt
+
+    # 3. Create target locale folders
+    mkdir -p de es-MX ja ko
+
+    # 4. Translate
+    python -m localization_connect.app_store_connect --translate
+
+    # 5. Review translations in de/, es-MX/, etc.
+
+    # 6. Upload to App Store Connect
+    python -m localization_connect.app_store_connect \
+        --send --ios-version 1.0.0
+
+
+SELECTIVE TRANSLATION
+---------------------
+
+    # Retranslate only German promotional text
+    python -m localization_connect.app_store_connect \
+        --translate --only de/promo.txt
+
+    # Translate only Japanese and Korean
+    python -m localization_connect.app_store_connect \
+        --translate --only ja
+    python -m localization_connect.app_store_connect \
+        --translate --only ko
+
+
+SELECTIVE UPLOAD
+----------------
+
+    # Upload only What's New and Promotional Text
+    python -m localization_connect.app_store_connect \
+        --send --ios-version 1.0.0 --fields new promo
+
+    # Upload to both iOS and Mac
+    python -m localization_connect.app_store_connect \
+        --send --ios-version 1.0.0 --mac-version 1.0.0
+
+
+FULL PIPELINE
+-------------
+
+    # Translate, fix URLs, and upload in one command
+    python -m localization_connect.app_store_connect \
+        --translate --fix-urls --send --ios-version 1.0.0
+
+
+SCREENSHOT PROCESSING
+---------------------
+
+    # Resize iPhone screenshots (preview first)
+    python -m localization_connect.resize_screenshots --ios --dry-run
+    python -m localization_connect.resize_screenshots --ios
+
+    # Translate screenshots to German and Japanese
+    python -m localization_connect.translate_screenshots \
+        --languages de ja
+
+================================================================================
+                                   NOTES
+================================================================================
+
+TRANSLATION BEHAVIOR
+--------------------
+
+    * Files are skipped if they exist AND meet character limits
+      (use --force to override)
+
+    * Claude is instructed to maintain your specified brand voice
+
+    * Automatic retry (up to 2x) when translations exceed character limits
+
+    * Translation considerations are saved in full_translation.json for review
+
+
+APP STORE CONNECT API
+---------------------
+
+    * JWT tokens are generated fresh for each request (20-minute validity)
+
+    * Localizations are created automatically if they don't exist
+
+    * Only specified fields are updated; others remain unchanged
+
+
+SCREENSHOT TRANSLATION
+----------------------
+
+    * Gemini attempts to preserve exact layout, colors, and fonts
+
+    * Results may vary; review translated screenshots carefully
+
+    * Not available in all regions
+
+================================================================================
+                              TROUBLESHOOTING
+================================================================================
+
+TRANSLATION EXCEEDS CHARACTER LIMIT
+-----------------------------------
+The system automatically retries up to 2 times when translations exceed limits.
+If it still fails:
+    * Use --only locale/file.txt to retranslate just that file
+    * Consider shortening your English source text
+    * Check full_translation.json for the considerations
+
+
+API AUTHENTICATION ERRORS
+-------------------------
+    * Claude: Verify your CLAUDE_API_KEY starts with "sk-ant-"
+    * App Store Connect: Ensure your .p8 file path is correct and the key
+      has appropriate permissions
+    * Google: Verify your GOOGLE_API_KEY and that the Gemini API is enabled
+
+
+MISSING LOCALE FOLDERS
+----------------------
+Create empty folders for each target locale before running translation:
+
+    mkdir -p de es-MX ja ko pt-BR zh-CN fr
+
+
+SCREENSHOTS NOT TRANSLATING
+---------------------------
+    * Gemini image generation may not be available in all regions
+    * Ensure images are PNG format
+    * Check that GOOGLE_API_KEY has access to the Gemini API
+
+================================================================================
+                           APP STORE CONNECT SETUP
+================================================================================
+
+To get your App Store Connect credentials:
+
+    1. Go to App Store Connect: https://appstoreconnect.apple.com
+
+    2. Navigate to Users and Access > Keys
+
+    3. Generate a new API key with "App Manager" role
+
+    4. Download the .p8 file (only available once!)
+
+    5. Note the Key ID and Issuer ID
+
+Your App ID can be found in your app's App Store Connect page URL or in the
+App Information section.
+
+================================================================================
+                                 SEE ALSO
+================================================================================
+
+App Store Connect API Documentation:
+    https://developer.apple.com/documentation/appstoreconnectapi
+
+Claude API Documentation:
+    https://docs.anthropic.com/en/api
+
+Google Gemini API Documentation:
+    https://ai.google.dev/docs
+
+================================================================================
+                          localization-connect 1.0.0
+                              January 2025
+================================================================================

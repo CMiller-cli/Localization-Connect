@@ -1,0 +1,409 @@
+.\" Man page for localization-connect
+.\" Generate with: groff -man -Tascii localization-connect.1
+.\"
+.TH LOCALIZATION-CONNECT 1 "January 2025" "1.0.0" "App Store Localization Tools"
+.SH NAME
+localization-connect \- AI-powered App Store localization pipeline
+.SH SYNOPSIS
+.B python -m localization_connect.app_store_connect
+[\fB\-\-translate\fR]
+[\fB\-\-send\fR]
+[\fB\-\-fix\-urls\fR]
+[\fIOPTIONS\fR]
+.PP
+.B python -m localization_connect.resize_screenshots
+[\fB\-\-ios\fR|\fB\-\-ipad\fR|\fB\-\-mac\fR]
+[\fIOPTIONS\fR]
+.PP
+.B python -m localization_connect.translate_screenshots
+[\fB\-\-force\fR]
+[\fB\-\-languages\fR \fILANG...\fR]
+.SH DESCRIPTION
+.B localization-connect
+is a comprehensive toolkit for localizing iOS, iPadOS, and macOS applications
+for the App Store. It provides three main capabilities:
+.PP
+.IP \(bu 3
+\fBMetadata Translation\fR: Translate app descriptions, release notes,
+promotional text, and keywords using Claude AI while respecting App Store
+character limits and maintaining brand voice.
+.IP \(bu 3
+\fBScreenshot Translation\fR: Use Google Gemini to translate text within
+screenshot images while preserving the original design and layout.
+.IP \(bu 3
+\fBDirect Upload\fR: Push translated content directly to App Store Connect
+via the official API.
+.PP
+The toolkit is designed to be used as a complete pipeline, from English source
+content to published localizations in App Store Connect.
+.SH COMMANDS
+.SS app_store_connect
+The main command for translating metadata and uploading to App Store Connect.
+.TP
+.B \-\-translate
+Translate English source files to all configured target locales using Claude AI.
+Files that already exist and meet character limits are skipped unless
+\fB\-\-force\fR is specified.
+.TP
+.B \-\-send
+Upload translated content to App Store Connect. Requires \fB\-\-ios\-version\fR
+and/or \fB\-\-mac\-version\fR to specify target versions.
+.TP
+.B \-\-fix\-urls
+Update privacy policy and terms of service URLs in desc.txt for each locale.
+Transforms base URLs by inserting the locale code (e.g., /docs/PrivacyPolicy
+becomes /docs/de/PrivacyPolicy for German).
+.SS resize_screenshots
+Resize PNG screenshots to App Store required dimensions.
+.TP
+.B \-\-ios
+Resize for iPhone display sizes (default). Supports 6.5", 6.7", and 6.9" displays.
+.TP
+.B \-\-ipad
+Resize for iPad display sizes. Supports 12.9" and 13" displays.
+.TP
+.B \-\-mac
+Resize for Mac display sizes. Supports standard and Retina displays.
+.SS translate_screenshots
+Translate text in screenshot images using Google Gemini.
+.SH OPTIONS
+.SS Translation Options
+.TP
+.BI \-\-force
+Force retranslation of all files, even if they already exist and meet
+character limits. Without this flag, existing valid translations are skipped.
+.TP
+.BI \-\-only " LOCALE" | LOCALE/FILE
+Limit translation to a specific locale or a specific file within a locale.
+.RS
+.PP
+Examples:
+.IP \(bu 3
+\fB\-\-only de\fR \- Only translate German
+.IP \(bu 3
+\fB\-\-only de/promo.txt\fR \- Only translate German promotional text
+.RE
+.TP
+.BI \-\-env " PATH"
+Path to a custom .env file for configuration. If not specified, looks for
+\&.env in the current directory.
+.SS Upload Options
+.TP
+.BI \-\-ios\-version " VERSION"
+iOS app version string to update (e.g., "1.0.0"). Required for iOS uploads.
+.TP
+.BI \-\-mac\-version " VERSION"
+macOS app version string to update. Required for Mac uploads.
+.TP
+.BI \-\-fields " FIELD..."
+Specify which fields to upload. Can be one or more of:
+.RS
+.IP \(bu 3
+\fBnew\fR \- What's New / Release Notes (new.txt)
+.IP \(bu 3
+\fBdesc\fR \- App Description (desc.txt)
+.IP \(bu 3
+\fBpromo\fR \- Promotional Text (promo.txt)
+.IP \(bu 3
+\fBkeywords\fR \- Keywords (keywords.txt)
+.IP \(bu 3
+\fBall\fR \- All fields (default)
+.RE
+.SS Screenshot Options
+.TP
+.B \-\-local
+Process the current directory and its parent instead of language subdirectories.
+.TP
+.B \-\-dry\-run
+Preview changes without modifying any files. Shows what would be resized.
+.TP
+.BI \-\-languages " LANG..."
+Specific language codes to translate screenshots to. If not specified, all
+default languages are processed.
+.SH DIRECTORY STRUCTURE
+The toolkit expects the following directory structure:
+.PP
+.RS
+.nf
+project/
+\(ua\(ua\(ua en/                     # English source (required)
+\(ua   \(ua\(ua\(ua new.txt            # What's New (4000 char max)
+\(ua   \(ua\(ua\(ua desc.txt           # Description (4000 char max)
+\(ua   \(ua\(ua\(ua promo.txt          # Promotional Text (170 char max)
+\(ua   \(ua\(ua\(ua keywords.txt       # Keywords, comma-separated (100 char max)
+\(ua\(ua\(ua de/                     # German translations
+\(ua\(ua\(ua es-MX/                  # Spanish (Mexico)
+\(ua\(ua\(ua ja/                     # Japanese
+\(ua\(ua\(ua ko/                     # Korean
+\(ua\(ua\(ua pt-BR/                  # Portuguese (Brazil)
+\(ua\(ua\(ua zh-CN/                  # Chinese (Simplified)
+\(ua\(ua\(ua fr/                     # French
+\(ua\(ua\(ua .env                    # Configuration file
+.fi
+.RE
+.PP
+Target locale directories should be created before running translation.
+They will be populated with translated files.
+.SH ENVIRONMENT
+Configuration is loaded from environment variables, typically via a .env file.
+.SS Required for Translation
+.TP
+.B CLAUDE_API_KEY
+Anthropic API key for Claude AI. Must start with "sk-ant-".
+.TP
+.B CLAUDE_MODEL
+Claude model to use. Default: claude-sonnet-4-20250514
+.SS Required for Screenshot Translation
+.TP
+.B GOOGLE_API_KEY
+Google AI API key for Gemini.
+.TP
+.B GEMINI_MODEL
+Gemini model ID. Default: models/gemini-2.0-flash
+.SS Required for App Store Connect Upload
+.TP
+.B APP_STORE_KEY_ID
+API Key ID from App Store Connect (10 characters).
+.TP
+.B APP_STORE_ISSUER_ID
+Issuer ID from App Store Connect (UUID format).
+.TP
+.B APP_STORE_PRIVATE_KEY_PATH
+Absolute path to the .p8 private key file downloaded from App Store Connect.
+.TP
+.B IOS_APP_ID
+iOS App ID from App Store Connect.
+.TP
+.B MAC_APP_ID
+Mac App ID from App Store Connect (optional, only needed for Mac uploads).
+.SS Optional Configuration
+.TP
+.B APP_NAME
+Your app's name, used in translation prompts for context.
+.TP
+.B APP_DESCRIPTION
+Brief description of your app, used in translation prompts.
+.TP
+.B BRAND_VOICE
+Tone and style guidelines for translations (e.g., "Professional and friendly").
+.TP
+.B BASE_PRIVACY_URL
+Base URL for privacy policy, used by \-\-fix\-urls.
+.TP
+.B BASE_TERMS_URL
+Base URL for terms of service, used by \-\-fix\-urls.
+.SH CHARACTER LIMITS
+App Store Connect enforces strict character limits:
+.PP
+.TS
+tab(|);
+l l l.
+\fBField\fR|\fBFile\fR|\fBLimit\fR
+_
+What's New|new.txt|4,000 characters
+Description|desc.txt|4,000 characters
+Promotional Text|promo.txt|170 characters
+Keywords|keywords.txt|100 characters
+.TE
+.PP
+The translation system automatically retries (up to 2 times) when Claude's
+translation exceeds these limits, requesting a shorter version.
+.SH SUPPORTED LOCALES
+.PP
+.TS
+tab(|);
+l l l.
+\fBFolder\fR|\fBLocale Code\fR|\fBLanguage\fR
+_
+en|en-US|English (U.S.)
+de|de-DE|German
+es-MX|es-MX|Spanish (Mexico)
+fr|fr-FR|French
+it|it|Italian
+ja|ja|Japanese
+ko|ko|Korean
+pt-BR|pt-BR|Portuguese (Brazil)
+ru|ru|Russian
+zh-CN|zh-Hans|Chinese (Simplified)
+zh-TW|zh-Hant|Chinese (Traditional)
+.TE
+.SH SCREENSHOT SIZES
+.SS iPhone (--ios)
+.TS
+tab(|);
+l l.
+6.5" Display|1260x2736, 2736x1260
+6.7" Display|1320x2868, 2868x1320
+6.9" Display|1290x2796, 2796x1290
+.TE
+.SS iPad (--ipad)
+.TS
+tab(|);
+l l.
+12.9" Display|2048x2732, 2732x2048
+13" Display|2064x2752, 2752x2064
+.TE
+.SS Mac (--mac)
+.TS
+tab(|);
+l l.
+Standard|1280x800, 1440x900
+Retina|2560x1600, 2880x1800
+.TE
+.SH OUTPUT FILES
+After translation, each locale folder contains:
+.TP
+.B new.txt
+Translated What's New / Release Notes
+.TP
+.B desc.txt
+Translated App Description
+.TP
+.B promo.txt
+Translated Promotional Text
+.TP
+.B keywords.txt
+Translated Keywords
+.TP
+.B full_translation.json
+JSON file containing all translations plus Claude's translation considerations
+and notes for each field. Useful for reviewing translation decisions.
+.SH EXAMPLES
+.SS Basic Translation Workflow
+.PP
+.RS
+.nf
+# 1. Set up environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# 2. Create source content
+mkdir -p en
+echo "Bug fixes and improvements" > en/new.txt
+echo "Your app description here" > en/desc.txt
+
+# 3. Create target locale folders
+mkdir -p de es-MX ja ko
+
+# 4. Translate
+python -m localization_connect.app_store_connect --translate
+
+# 5. Review translations in de/, es-MX/, etc.
+
+# 6. Upload to App Store Connect
+python -m localization_connect.app_store_connect \\
+    --send --ios-version 1.0.0
+.fi
+.RE
+.SS Selective Translation
+.PP
+.RS
+.nf
+# Retranslate only German promotional text
+python -m localization_connect.app_store_connect \\
+    --translate --only de/promo.txt
+
+# Translate only Japanese and Korean
+python -m localization_connect.app_store_connect \\
+    --translate --only ja
+python -m localization_connect.app_store_connect \\
+    --translate --only ko
+.fi
+.RE
+.SS Selective Upload
+.PP
+.RS
+.nf
+# Upload only What's New and Promotional Text
+python -m localization_connect.app_store_connect \\
+    --send --ios-version 1.0.0 --fields new promo
+
+# Upload to both iOS and Mac
+python -m localization_connect.app_store_connect \\
+    --send --ios-version 1.0.0 --mac-version 1.0.0
+.fi
+.RE
+.SS Full Pipeline
+.PP
+.RS
+.nf
+# Translate, fix URLs, and upload in one command
+python -m localization_connect.app_store_connect \\
+    --translate --fix-urls --send --ios-version 1.0.0
+.fi
+.RE
+.SS Screenshot Processing
+.PP
+.RS
+.nf
+# Resize iPhone screenshots (preview first)
+python -m localization_connect.resize_screenshots --ios --dry-run
+python -m localization_connect.resize_screenshots --ios
+
+# Translate screenshots to German and Japanese
+python -m localization_connect.translate_screenshots \\
+    --languages de ja
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+Error occurred (API failure, missing configuration, etc.)
+.SH FILES
+.TP
+.B .env
+Environment configuration file in the working directory
+.TP
+.B .env.example
+Template configuration file with all available options
+.TP
+.B */full_translation.json
+Translation output with notes, generated in each locale folder
+.SH NOTES
+.SS Translation Behavior
+.IP \(bu 3
+Files are skipped if they exist AND meet character limits (use \-\-force to override)
+.IP \(bu 3
+Claude is instructed to maintain your specified brand voice
+.IP \(bu 3
+Automatic retry (up to 2x) when translations exceed character limits
+.IP \(bu 3
+Translation considerations are saved in full_translation.json for review
+.SS App Store Connect API
+.IP \(bu 3
+JWT tokens are generated fresh for each request (20-minute validity)
+.IP \(bu 3
+Localizations are created automatically if they don't exist
+.IP \(bu 3
+Only specified fields are updated; others remain unchanged
+.SS Screenshot Translation
+.IP \(bu 3
+Gemini attempts to preserve exact layout, colors, and fonts
+.IP \(bu 3
+Results may vary; review translated screenshots carefully
+.IP \(bu 3
+Not available in all regions
+.SH BUGS
+Report bugs at: https://github.com/your-repo/localization-connect/issues
+.SH SEE ALSO
+.BR anthropic (1),
+.BR jwt (1)
+.PP
+App Store Connect API Documentation:
+.br
+https://developer.apple.com/documentation/appstoreconnectapi
+.PP
+Claude API Documentation:
+.br
+https://docs.anthropic.com/en/api
+.PP
+Google Gemini API Documentation:
+.br
+https://ai.google.dev/docs
+.SH AUTHOR
+Written for App Store localization workflows.
+.SH COPYRIGHT
+MIT License. Free to use and modify.
